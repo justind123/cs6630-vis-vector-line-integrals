@@ -1,30 +1,8 @@
-// Completed by Justin Duross and Emmalee Ingman
-//
-// https://www.khanacademy.org/math/multivariable-calculus/integrating-multivariable-functions/line-integrals-in-vector-fields-articles/a/line-integrals-in-a-vector-field
+/************************************************
+ * DRAWING and D3 logic lives here
+ ************************************************/
 
-// inital config for visualization
-const config = {
-  width: 600,
-  height: 600,
-  margin: 40
-}
 
-// current state for visualization,
-// intended to change w/ interactivity
-const state = {
-  F: (x, y) => [-y, x],
-  domain: [-10, 10],
-  step: 1,
-  normalize: false,
-  color: false,
-  curve: { // integral path is represented as a parametric curve
-    r: t => [5 * Math.cos(t), 5 * Math.sin(t)],
-    tRange: [0, Math.PI], // start and end for t used in r(t)
-    samples: 1000 // number of samples to take along path
-  }
-}
-
-// D3 INIT AND SETUP FUNCTIONS
 function createSvg(selector, config) {
   return d3.select(selector)
     .append('svg')
@@ -60,7 +38,6 @@ function createLayers(svg) {
   };
 }
 
-// DRAW FUNCTIONS
 
 function createScales() {
   const { width, height, margin } = config
@@ -79,25 +56,7 @@ function drawAxes(layers, scales) {
     .call(d3.axisLeft(scales.y));
 }
 
-// samples the vector field at a defined step size
-// for the provided domain and function
-function sampleField(F, domain, step) {
-  const points = [];
-  for (let x = domain[0]; x <= domain[1]; x += step) {
-    for (let y = domain[0]; y <= domain[1]; y += step) {
-      const [u, v] = F(x, y);
-      points.push({
-        x: x,
-        y: y,
-        u: u,
-        v: v,
-        mag: Math.hypot(u, v)
-      });
-    }
-  }
 
-  return points;
-}
 
 // takes in the field layer, with the samples points
 // to draw the actual arrows in the view.
@@ -123,21 +82,6 @@ function drawField(layer, points, scales, state) {
     .attr('marker-end', 'url(#arrowhead)');
 }
 
-// samples the curve along r(t) 
-function sampleCurve(curve) {
-  const { r, tRange, samples } = curve;
-  const [t0, t1] = tRange;
-  const points = []
-
-  for (let i = 0; i <= samples; i++) {
-    // calcuate current t based on samples
-    const t = t0 + (i / samples) * (t1 - t0);
-    const [x, y] = r(t);
-    points.push({ t, x, y });
-  }
-
-  return points;
-}
 
 function drawPath(layer, points, scales) {
   const line = d3.line()
@@ -151,21 +95,3 @@ function drawPath(layer, points, scales) {
     .attr('fill', 'none')
     .attr('stroke', 'red')
 }
-
-
-const svg = createSvg('#vis', config);
-defineArrowhead(svg);
-const layers = createLayers(svg);
-
-function render() {
-  const scales = createScales();
-  drawAxes(layers, scales);
-
-  const fieldSamples = sampleField(state.F, state.domain, state.step);
-  drawField(layers.field, fieldSamples, scales, state);
-
-  const pathSamples = sampleCurve(state.curve);
-  drawPath(layers.path, pathSamples, scales);
-}
-
-render();
