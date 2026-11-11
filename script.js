@@ -1,5 +1,6 @@
 // Completed by Justin Duross and Emmalee Ingman
-
+//
+// https://www.khanacademy.org/math/multivariable-calculus/integrating-multivariable-functions/line-integrals-in-vector-fields-articles/a/line-integrals-in-a-vector-field
 
 // inital config for visualization
 const config = {
@@ -15,7 +16,12 @@ const state = {
   domain: [-10, 10],
   step: 1,
   normalize: false,
-  color: false
+  color: false,
+  curve: { // integral path is represented as a parametric curve
+    r: t => [5 * Math.cos(t), 5 * Math.sin(t)],
+    tRange: [0, Math.PI], // start and end for t used in r(t)
+    samples: 1000 // number of samples to take along path
+  }
 }
 
 // D3 INIT AND SETUP FUNCTIONS
@@ -50,7 +56,7 @@ function createLayers(svg) {
     xAxis: svg.append('g').attr('class', 'x-axis'),
     yAxis: svg.append('g').attr('class', 'y-axis'),
     field: svg.append('g').attr('class', 'vector-field'),
-    //path:
+    path: svg.append('g').attr('class', 'path')
   };
 }
 
@@ -117,6 +123,35 @@ function drawField(layer, points, scales, state) {
     .attr('marker-end', 'url(#arrowhead)');
 }
 
+// samples the curve along r(t) 
+function sampleCurve(curve) {
+  const { r, tRange, samples } = curve;
+  const [t0, t1] = tRange;
+  const points = []
+
+  for (let i = 0; i <= samples; i++) {
+    // calcuate current t based on samples
+    const t = t0 + (i / samples) * (t1 - t0);
+    const [x, y] = r(t);
+    points.push({ t, x, y });
+  }
+
+  return points;
+}
+
+function drawPath(layer, points, scales) {
+  const line = d3.line()
+    .x(d => scales.x(d.x))
+    .y(d => scales.y(d.y))
+  
+  layer.selectAll('path')
+    .data([points])
+    .join('path')
+    .attr('d', line)
+    .attr('fill', 'none')
+    .attr('stroke', 'red')
+}
+
 
 const svg = createSvg('#vis', config);
 defineArrowhead(svg);
@@ -125,7 +160,12 @@ const layers = createLayers(svg);
 function render() {
   const scales = createScales();
   drawAxes(layers, scales);
-  drawField(layers.field, sampleField(state.F, state.domain, state.step), scales, state);
+
+  const fieldSamples = sampleField(state.F, state.domain, state.step);
+  drawField(layers.field, fieldSamples, scales, state);
+
+  const pathSamples = sampleCurve(state.curve);
+  drawPath(layers.path, pathSamples, scales);
 }
 
 render();
