@@ -22,11 +22,22 @@ const state = {
   step: 1,
   normalize: false,
   color: false,
+  animation: true,
+  animationDuration: 2000,
   curve: { // integral path is represented as a parametric curve
     r: t => [5 * Math.cos(t), 5 * Math.sin(t)],
     tRange: [0, Math.PI], // start and end for t used in r(t)
     samples: 1000 // number of samples to take along path
   }
+}
+
+// path animation timer
+// global so we can start/stop it when needed
+let pathTimer = null;
+
+function stopPathAnimation() {
+  if (pathTimer) pathTimer.stop();
+  pathTimer = null;
 }
 
 
@@ -42,10 +53,11 @@ function render() {
   drawField(layers.field, fieldSamples, scales, state);
 
   const pathSamples = sampleCurve(state.curve);
-  drawPath(layers.path, pathSamples, scales);
-
-  const integral = lineIntegral(state.F, pathSamples);
-  updateIntegralValue(integral)
+  if (state.animation) {
+    animatePath(pathSamples, scales)
+  } else {
+    showPath(pathSamples, scales)
+  }
 }
 
 render();

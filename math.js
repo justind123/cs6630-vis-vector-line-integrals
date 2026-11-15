@@ -48,12 +48,16 @@ function lineIntegral(F, points) {
         const a = points[i - 1];
         const b = points[i];
 
-        // uses midpoint of segment for better accuracy (pretty sure)
-        const [u, v] = F((a.x + b.x) / 2, (a.y + b.y) / 2);
-
         // dot product and add to total
-        total += u * (b.x - a.x) + v * (b.y - a.y);
+        total += segmentIntegral(F, points[i - 1], points[i])
     }
     console.log('integral value:', total)
     return total;
+}
+
+// calculates the integral for a singular point
+// uses midpoint of path segment
+function segmentIntegral(F, a, b) {
+  const [u, v] = F((a.x + b.x) / 2, (a.y + b.y) / 2);
+  return u * (b.x - a.x) + v * (b.y - a.y);
 }

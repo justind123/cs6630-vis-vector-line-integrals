@@ -2,6 +2,7 @@
  * DRAWING and D3 logic lives here
  ************************************************/
 
+// See for more info and workings for path animation: https://d3js.org/d3-timer
 
 function createSvg(selector, config) {
   return d3.select(selector)
@@ -82,7 +83,16 @@ function drawField(layer, points, scales, state) {
     .attr('marker-end', 'url(#arrowhead)');
 }
 
-function drawPath(layer, points, scales) {
+// shows path and displays integral value with
+// no animation
+function showPath(points, scales) {
+  // stop any active animation
+  stopPathAnimation();
+  drawPath(layers.path, points, scales);
+  updateIntegralValue(lineIntegral(state.F, points));
+}
+
+function drawPath(layer, points, scales, duration) {
   const line = d3.line()
     .x(d => scales.x(d.x))
     .y(d => scales.y(d.y))
@@ -96,6 +106,52 @@ function drawPath(layer, points, scales) {
     .attr('stroke-width', '1')
 }
 
+// keeps the displayed integral value consistent,
+// especially with super low values so it doesn't
+// flicker between -0.000 and 0.000
+function formatNumber(value, decimals) {
+  let rounded = Number(value.toFixed(decimals));
+  if (rounded === 0) {
+    rounded = 0;
+  }
+
+  return rounded.toFixed(decimals);
+}
+
 function updateIntegralValue(value) {
-  d3.select('#integral').text(`Integral Value: ${value}`);
+  d3.select('#integral').text(`Integral Value: ${formatNumber(value, 3)}`);
+}
+
+/************************************************
+ * PATH ANIMATION
+ * https://d3js.org/d3-timer
+ ************************************************/
+
+// uses d3.timer() to interpolate how many steps to draw
+// per frame for the specified animationDuration
+function animatePath(points, scales) {
+  // stop any active animation before starting new one
+  stopPathAnimation();
+
+  const lastStep = points.length - 1;
+  let currStep = 0;
+  let total = 0;
+
+  pathTimer = d3.timer(elapsed => {
+    // clean up timer when done
+    if (currStep === lastStep) {
+      stopPathAnimation();
+    }
+
+    const progress = Math.min(elapsed / state.animationDuration, 1);
+    const targetStep = Math.floor(progress * lastStep);
+
+    while (currStep < targetStep) {
+      total += segmentIntegral(state.F, points[currStep], points[currStep + 1]);
+      currStep++;
+    }
+
+    drawPath(layers.path, points.slice(0, currStep + 1), scales);
+    updateIntegralValue(total);
+  });
 }
