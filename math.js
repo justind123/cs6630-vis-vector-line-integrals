@@ -38,3 +38,22 @@ function sampleCurve(curve) {
 
   return points;
 }
+
+// calculates the vector line integral from F
+// at points
+function lineIntegral(F, points) {
+    let total = 0;
+
+    for (let i = 1; i < points.length; i++) {
+        const a = points[i - 1];
+        const b = points[i];
+
+        // uses midpoint of segment for better accuracy (pretty sure)
+        const [u, v] = F((a.x + b.x) / 2, (a.y + b.y) / 2);
+
+        // dot product and add to total
+        total += u * (b.x - a.x) + v * (b.y - a.y);
+    }
+    console.log('integral value:', total)
+    return total;
+}

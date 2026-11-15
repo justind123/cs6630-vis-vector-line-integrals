@@ -43,6 +43,9 @@ function render() {
 
   const pathSamples = sampleCurve(state.curve);
   drawPath(layers.path, pathSamples, scales);
+
+  const integral = lineIntegral(state.F, pathSamples);
+  updateIntegralValue(integral)
 }
 
 render();

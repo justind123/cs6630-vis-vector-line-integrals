@@ -82,7 +82,6 @@ function drawField(layer, points, scales, state) {
     .attr('marker-end', 'url(#arrowhead)');
 }
 
-
 function drawPath(layer, points, scales) {
   const line = d3.line()
     .x(d => scales.x(d.x))
@@ -94,4 +93,9 @@ function drawPath(layer, points, scales) {
     .attr('d', line)
     .attr('fill', 'none')
     .attr('stroke', 'red')
+    .attr('stroke-width', '1')
+}
+
+function updateIntegralValue(value) {
+  d3.select('#integral').text(`Integral Value: ${value}`);
 }
