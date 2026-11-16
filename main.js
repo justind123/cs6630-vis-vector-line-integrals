@@ -57,6 +57,9 @@ function buildField(u, v) {
   // this function, here called F, takes in parameters x and y
   // it returns array [u, v], where u and v come from the text input from the user
   const F = new Function('x', 'y', `return [${u}, ${v}]`);
+
+  // quick error check to see if function is valid
+  const [a, b] = F(1, 1);
   if (typeof a !== 'number' || typeof b !== 'number') {
     return null;
   }
