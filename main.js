@@ -114,7 +114,7 @@ function setupConfig() {
   updateInputLabels();
 
   // keep slider labels live while dragging
-  d3.selectAll('#t-end, #samples').on('input', updateInputLabels);
+  d3.selectAll('.config input[type="range"]').on('input', updateInputLabels);
 
   // apply all inputs and redraw only when Render is clicked
   d3.select('#render-button').on('click', () => {

@@ -10,3 +10,27 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+.config h3 {
+  margin: 0px;
+}
+
+.config label {
+  display: flex;
+  flex-direction: column;
+}
+
+.config label.checkbox {
+  flex-direction: row;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0px 0px 12px 0px;
+}
+
+#render-button {
+  margin: 12px 0px 0px 0px;
+}
