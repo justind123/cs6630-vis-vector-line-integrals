@@ -21,15 +21,19 @@ const state = {
     u: '-y',
     v: 'x',
   },
-  F: (x, y) => [-y, x],
+  F: null,
   domain: [-10, 10],
   step: 1,
   normalize: false,
   color: false,
   animate: true,
   animationDuration: 2000,
+  curveText: {
+    x: '5 * Math.cos(t)',
+    y: '5 * Math.sin(t)'
+  },
   curve: { // integral path is represented as a parametric curve
-    r: t => [5 * Math.cos(t), 5 * Math.sin(t)],
+    r: null,
     tRange: [0, Math.PI], // start and end for t used in r(t)
     samples: 1000 // number of samples to take along path
   }
@@ -53,22 +57,45 @@ const layers = createLayers(svg);
 // uses built-in Function class to pass strings as javascript
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function
 function buildField(u, v) {
-  // Function() returns a function
-  // this function, here called F, takes in parameters x and y
-  // it returns array [u, v], where u and v come from the text input from the user
-  const F = new Function('x', 'y', `return [${u}, ${v}]`);
+  // catch invalid syntax errors
+  try {
+    // Function() returns a function
+    // this function, here called F, takes in parameters x and y
+    // it returns array [u, v], where u and v come from the text input from the user
+    const F = new Function('x', 'y', `return [${u}, ${v}];`);
 
-  // quick error check to see if function is valid
-  const [a, b] = F(1, 1);
-  if (typeof a !== 'number' || typeof b !== 'number') {
+    // quick error check to see if function is valid
+    const [a, b] = F(1, 1);
+    if (typeof a !== 'number' || typeof b !== 'number') {
+      return null;
+    }
+
+    return F;
+  } catch (error) {
     return null;
   }
+}
 
-  return F;
+function buildCurve(x, y) {
+  // catch invalid syntax errors
+  try {
+    const r = new Function('t', `return [${x}, ${y}];`);
+
+    const [a, b] = r(1);
+    if (typeof a !== 'number' || typeof b !== 'number') {
+      return null;
+    }
+
+    return r;
+  } catch (error) {
+    return null;
+  }
 }
 
 // reads state defaults and populates input values
 function initInputs() {
+  d3.select('#curve-x').property('value', state.curveText.x);
+  d3.select('#curve-y').property('value', state.curveText.y);
   d3.select('#t-end').property('value', state.curve.tRange[1]);
   d3.select('#samples').property('value', state.curve.samples);
   d3.select('#animate').property('checked', state.animate);
@@ -93,12 +120,22 @@ function readInputs() {
   const F = buildField(u, v);
 
   if (!F) {
-    alert('Invalid formula. Use JavaScript syntax, e.g. Math.sin(x), x**2');
+    alert('Invalid formula. Use JavaScript syntax. ex: Math.sin(x), x**2');
+    return false;
+  }
+
+  const x = d3.select('#curve-x').property('value');
+  const y = d3.select('#curve-y').property('value');
+  const r = buildCurve(x, y);
+  if (!r) {
+    alert('Invalid formula. Use JavaScript syntax with t. ex: 5*t*Math.sin(t)');
     return false;
   }
 
   state.fieldText = { u, v };
   state.F = F;
+  state.curveText = { x: x, y: y };
+  state.curve.r = r;
   state.curve.tRange = [state.curve.tRange[0], Number(d3.select('#t-end').property('value'))];
   state.curve.samples = Number(d3.select('#samples').property('value'));
   state.animate = d3.select('#animate').property('checked');
@@ -140,4 +177,6 @@ function render() {
 }
 
 setupConfig();
+// builds F and r in state from the default user text values
+readInputs();
 render();
