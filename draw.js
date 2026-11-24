@@ -4,6 +4,10 @@
 
 // See for more info and workings for path animation: https://d3js.org/d3-timer
 
+const DIVERGING_COLORS = ['#0000ff', '#000000', '#ff0000'];
+const SOLID_PATH_COLOR = 'red';
+
+
 function createSvg(selector, config) {
   return d3.select(selector)
     .append('svg')
@@ -35,6 +39,7 @@ function createLayers(svg) {
     xAxis: svg.append('g').attr('class', 'x-axis'),
     yAxis: svg.append('g').attr('class', 'y-axis'),
     field: svg.append('g').attr('class', 'vector-field'),
+    area: svg.append('g').attr('class', 'path-area'),
     path: svg.append('g').attr('class', 'path')
   };
 }
@@ -46,6 +51,15 @@ function createScales() {
     x: d3.scaleLinear().domain(state.domain).range([margin, width - margin]),
     y: d3.scaleLinear().domain(state.domain).range([height - margin, margin]),
   };
+}
+
+function createDivergingScale(values) {
+  const maxAbs = d3.max(values, Math.abs) || 1;
+  return d3.scaleLinear()
+    .domain([-maxAbs, 0, maxAbs])
+    .range(DIVERGING_COLORS)
+    .interpolate(d3.interpolateLab)
+    .clamp(true);
 }
 
 function drawAxes(layers, scales) {
@@ -68,8 +82,14 @@ function drawField(layer, points, scales, state) {
   const maxMag = d3.max(points, d => d.mag) || 1;
   const arrowPx = (scales.x(step) - scales.x(0)) * 0.85;
 
-  // Divide by own magnitude (same length) or by max (length ∝ magnitude)
-  const len = d => (normalize ? d.mag : maxMag);
+  // Divide by own magnitude
+  const len = d => {
+    if (normalize) {
+      return d.mag;
+    } else {
+      return maxMag;
+    }
+  };
 
   layer.selectAll('line')
     .data(points.filter(d => d.mag > 0))
@@ -85,25 +105,108 @@ function drawField(layer, points, scales, state) {
 
 // shows path and displays integral value with
 // no animation
-function showPath(points, scales) {
-  // stop any active animation
+function showPath(segments, scales, colorScale) {
   stopPathAnimation();
-  drawPath(layers.path, points, scales);
-  updateIntegralValue(lineIntegral(state.F, points));
+  drawStyledPath(segments, scales, colorScale);
+  updateIntegralValue(integralUpTo(segments));
 }
 
-function drawPath(layer, points, scales, duration) {
-  const line = d3.line()
-    .x(d => scales.x(d.x))
-    .y(d => scales.y(d.y))
-  
-  layer.selectAll('path')
-    .data([points])
-    .join('path')
-    .attr('d', line)
-    .attr('fill', 'none')
-    .attr('stroke', 'red')
-    .attr('stroke-width', '1')
+// draws the path in the style chosen in the config panel
+// (state.pathStyle is only updated when Render is clicked)
+function drawStyledPath(segments, scales, colorScale) {
+  const style = state.pathStyle;
+
+  // when color gradient is selected
+  let lineColor;
+  if (style === 'gradient') {
+    lineColor = d => colorScale(d.cumulative);
+  } else {
+    lineColor = () => SOLID_PATH_COLOR;
+  }
+
+  // when shaded area style is selected
+  let areaSegments;
+  if (style === 'area') {
+    areaSegments = segments;
+  } else {
+    areaSegments = [];
+  }
+
+  // only need color map legend when not default solid
+  let legendDisplay;
+  if (style === 'solid') {
+    legendDisplay = 'none';
+  } else {
+    legendDisplay = null;
+  }
+
+  drawArea(layers.area, areaSegments, scales, colorScale);
+  drawPath(layers.path, segments, scales, lineColor);
+  d3.select('#path-legend').style('display', legendDisplay);
+}
+
+function drawPath(layer, segments, scales, color) {
+  layer.selectAll('line')
+    .data(segments)
+    .join('line')
+    .attr('x1', d => scales.x(d.a.x))
+    .attr('y1', d => scales.y(d.a.y))
+    .attr('x2', d => scales.x(d.b.x))
+    .attr('y2', d => scales.y(d.b.y))
+    .attr('stroke', color)
+    .attr('stroke-width', 2)
+}
+
+const AREA_MAX_PX = 40; // largest band width possible so it doesn't explode
+
+// shaded area beside the path whose width is the running integral,
+// positive values extend to right side of path, negative to left
+// using polygon so the the area looks continuous and not just single lines
+// coming out from each line path segment
+function drawArea(layer, segments, scales, colorScale) {
+  const pxPerUnit = AREA_MAX_PX / colorScale.domain()[2];
+
+  layer.selectAll('polygon')
+    .data(segments)
+    .join('polygon')
+    .attr('points', (d, i) => {
+      // running integral at the start and end of this segment
+      let startValue;
+      if (i > 0) {
+        startValue = segments[i - 1].cumulative;
+      } else {
+        startValue = 0;
+      }
+      const endValue = d.cumulative;
+
+      // segment start and end points
+      const ax = scales.x(d.a.x);
+      const ay = scales.y(d.a.y);
+      const bx = scales.x(d.b.x);
+      const by = scales.y(d.b.y);
+
+      // unit vector perpendicular to the segment, in pixels
+      const len = Math.hypot(bx - ax, by - ay) || 1;
+      const nx = -(by - ay) / len;
+      const ny = (bx - ax) / len;
+
+      // band width (in pixels) at the start and end of the segment
+      const startWidth = startValue * pxPerUnit;
+      const endWidth = endValue * pxPerUnit;
+
+      // four corners of the shaded band: two on the path
+      const pathStart = [ax, ay];
+      const pathEnd = [bx, by];
+      const bandEnd = [bx + nx * endWidth, by + ny * endWidth];
+      const bandStart = [ax + nx * startWidth, ay + ny * startWidth];
+
+      // points for svg
+      const corners = [pathStart, pathEnd, bandEnd, bandStart];
+
+      return corners.join(' ');
+    })
+    .attr('fill', d => colorScale(d.cumulative))
+    .attr('fill-opacity', 0.4);
 }
 
 // keeps the displayed integral value consistent,
@@ -129,29 +232,25 @@ function updateIntegralValue(value) {
 
 // uses d3.timer() to interpolate how many steps to draw
 // per frame for the specified animationDuration
-function animatePath(points, scales) {
+function animatePath(segments, scales, colorScale) {
   // stop any active animation before starting new one
   stopPathAnimation();
 
-  const lastStep = points.length - 1;
-  let currStep = 0;
-  let total = 0;
-
   pathTimer = d3.timer(elapsed => {
-    // clean up timer when done
-    if (currStep === lastStep) {
-      stopPathAnimation();
-    }
-
     const progress = Math.min(elapsed / state.animationDuration, 1);
-    const targetStep = Math.floor(progress * lastStep);
+    const drawn = segments.slice(0, Math.floor(progress * segments.length));
 
-    while (currStep < targetStep) {
-      total += segmentIntegral(state.F, points[currStep], points[currStep + 1]);
-      currStep++;
-    }
+    drawStyledPath(drawn, scales, colorScale);
+    updateIntegralValue(integralUpTo(drawn));
 
-    drawPath(layers.path, points.slice(0, currStep + 1), scales);
-    updateIntegralValue(total);
+    if (progress === 1) stopPathAnimation();
   });
+}
+
+function updatePathLegend(colorScale) {
+  const [min, , max] = colorScale.domain();
+  d3.select('#path-legend .legend-bar')
+    .style('background', `linear-gradient(to right, ${DIVERGING_COLORS.join(', ')})`);
+  d3.select('#legend-min').text(formatNumber(min, 2));
+  d3.select('#legend-max').text(formatNumber(max, 2));
 }
