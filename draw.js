@@ -53,10 +53,22 @@ function createScales() {
   };
 }
 
+// diverging scale centered on zero
 function createDivergingScale(values) {
-  const maxAbs = d3.max(values, Math.abs) || 1;
+  const maxAbs = d3.max(values, Math.abs);
+
+  // help fix rounding issues for super small integrals
+  // if max value anywhere on the line path is basically
+  // zero then set the color scale to [-1, 1]
+  let domainMax;
+  if (maxAbs > 1e-10) {
+    domainMax = maxAbs;
+  } else {
+    domainMax = 1;
+  }
+
   return d3.scaleLinear()
-    .domain([-maxAbs, 0, maxAbs])
+    .domain([-domainMax, 0, domainMax])
     .range(DIVERGING_COLORS)
     .interpolate(d3.interpolateLab)
     .clamp(true);
