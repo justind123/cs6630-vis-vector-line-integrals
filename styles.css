@@ -34,3 +34,13 @@ body {
 #render-button {
   margin: 12px 0px 0px 0px;
 }
+
+.legend-bar {
+  height: 10px;
+}
+
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8em;
+}
