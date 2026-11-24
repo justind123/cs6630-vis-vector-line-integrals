@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Vector Line Integrals</title>
@@ -15,6 +16,12 @@
     <div id="vis"></div>
     <div class="config">
       <p id="integral"></p>
+      <div id="path-legend" class="legend">
+        <div class="legend-bar"></div>
+        <div class="legend-labels">
+          <span id="legend-min"></span><span>0</span><span id="legend-max"></span>
+        </div>
+      </div>
 
       <div class="section">
         <h3>Path</h3>
@@ -31,6 +38,22 @@
         <label>
           <span>Samples: <span id="samples-value"></span></span>
           <input type="range" id="samples" min="1" max="1000" step="1">
+        </label>
+      </div>
+
+      <div class="section">
+        <h3>Path Style</h3>
+        <label class="checkbox">
+          <input type="radio" name="path-style" value="solid" checked>
+          <span>Solid line</span>
+        </label>
+        <label class="checkbox">
+          <input type="radio" name="path-style" value="gradient">
+          <span>Color gradient (running integral)</span>
+        </label>
+        <label class="checkbox">
+          <input type="radio" name="path-style" value="area">
+          <span>Shaded area (running integral)</span>
         </label>
       </div>
 
