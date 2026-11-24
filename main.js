@@ -25,7 +25,7 @@ const state = {
   domain: [-10, 10],
   step: 1,
   normalize: false,
-  color: false,
+  pathStyle: 'solid', // solid, gradient, or area styles
   animate: true,
   animationDuration: 2000,
   curveText: {
@@ -103,6 +103,7 @@ function initInputs() {
   d3.select('#field-u').property('value', state.fieldText.u);
   d3.select('#field-v').property('value', state.fieldText.v);
   d3.select('#arrow-step').property('value', state.step);
+  d3.select(`input[name="path-style"][value="${state.pathStyle}"]`).property('checked', true);
 }
 
 // updates input labels with user-selected values
@@ -141,6 +142,7 @@ function readInputs() {
   state.animate = d3.select('#animate').property('checked');
   state.animationDuration = Number(d3.select('#duration').property('value'));
   state.step = Number(d3.select('#arrow-step').property('value'));
+  state.pathStyle = d3.select('input[name="path-style"]:checked').property('value');
 
   return true;
 }
@@ -169,10 +171,14 @@ function render() {
   drawField(layers.field, fieldSamples, scales, state);
 
   const pathSamples = sampleCurve(state.curve);
+  const segments = buildSegments(state.F, pathSamples);
+  const colorScale = createDivergingScale(segments.map(d => d.cumulative));
+  updatePathLegend(colorScale);
+
   if (state.animate) {
-    animatePath(pathSamples, scales)
+    animatePath(segments, scales, colorScale);
   } else {
-    showPath(pathSamples, scales)
+    showPath(segments, scales, colorScale);
   }
 }
 
