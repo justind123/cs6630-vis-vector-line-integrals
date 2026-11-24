@@ -61,3 +61,28 @@ function segmentIntegral(F, a, b) {
   const [u, v] = F((a.x + b.x) / 2, (a.y + b.y) / 2);
   return u * (b.x - a.x) + v * (b.y - a.y);
 }
+
+// value of the integral up to the last drawn segment
+function integralUpTo(segments) {
+  if (segments.length > 0) {
+    return segments[segments.length - 1].cumulative;
+  } else {
+    return 0;
+  }
+}
+
+
+function buildSegments(F, points) {
+  const segments = [];
+  let cumulative = 0;
+
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+
+    cumulative += segmentIntegral(F, a, b);
+    segments.push({ a, b, cumulative });
+  }
+
+  return segments;
+}
